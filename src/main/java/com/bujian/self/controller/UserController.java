@@ -2,7 +2,6 @@ package com.bujian.self.controller;
 
 import org.springframework.web.bind.annotation.*;
 
-import com.bujian.self.dto.QueryResponse;
 import com.bujian.self.dto.User;
 import com.bujian.self.dto.UserQueryRequest;
 import com.bujian.self.service.UserService;
@@ -26,7 +25,7 @@ public class UserController {
      * @return 查询响应
      */
     @PostMapping("/search")
-    public QueryResponse<List<User>> searchUsers(@RequestBody UserQueryRequest request) {
+    public List<User> searchUsers(@RequestBody UserQueryRequest request) {
         return userService.safeSearch(request);
     }
 
@@ -34,15 +33,12 @@ public class UserController {
      * 简化版查询接口（使用 GET 请求）
      */
     @GetMapping("/search")
-    public QueryResponse<List<User>> searchUsersGet(
+    public List<User> searchUsersGet(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer minAge,
             @RequestParam(required = false) Integer maxAge) {
         
-        UserQueryRequest request = new UserQueryRequest();
-        request.setName(name);
-        request.setMinAge(minAge);
-        request.setMaxAge(maxAge);
+        UserQueryRequest request = new UserQueryRequest(name, minAge, maxAge);
         
         return userService.safeSearch(request);
     }

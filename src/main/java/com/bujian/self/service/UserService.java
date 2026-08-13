@@ -3,9 +3,8 @@ package com.bujian.self.service;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
+import com.bujian.self.config.SqlCaptureExecutor;
 import com.bujian.self.dao.UserDao;
-import com.bujian.self.dto.QueryResponse;
-import com.bujian.self.dto.SqlCaptureExecutor;
 import com.bujian.self.dto.User;
 import com.bujian.self.dto.UserQueryRequest;
 
@@ -26,18 +25,18 @@ public class UserService {
      * @param request 查询请求
      * @return 查询响应
      */
-    public QueryResponse<List<User>> safeSearch(UserQueryRequest request) {
+    public List<User> safeSearch(UserQueryRequest request) {
         // 构建参数
         MapSqlParameterSource params = new MapSqlParameterSource();
         
-        if (request.getName() != null && !request.getName().trim().isEmpty()) {
-            params.addValue("name", "%" + request.getName() + "%");
+        if (request.name() != null && !request.name().trim().isEmpty()) {
+            params.addValue("name", "%" + request.name() + "%");
         }
-        if (request.getMinAge() != null) {
-            params.addValue("minAge", request.getMinAge());
+        if (request.minAge() != null) {
+            params.addValue("minAge", request.minAge());
         }
-        if (request.getMaxAge() != null) {
-            params.addValue("maxAge", request.getMaxAge());
+        if (request.maxAge() != null) {
+            params.addValue("maxAge", request.maxAge());
         }
         
         // 执行查询，传入 SQL 审查函数（在 MapSqlParameterSource 层面判断）
@@ -46,13 +45,13 @@ public class UserService {
                 this::reviewSqlParams
         );
         
-        if (!executor.isShouldExecute()) {
+        if (!executor.shouldExecute()) {
             // SQL 被拒绝
-            return QueryResponse.rejected(executor.getRejectReason(), executor.getSql());
+            throw new IllegalArgumentException(executor.rejectReason());
         }
         
         // SQL 执行成功
-        return QueryResponse.success(executor.getResult(), executor.getSql());
+        return executor.result();
     }
 
     /**
