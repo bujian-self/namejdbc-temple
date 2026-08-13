@@ -1,36 +1,36 @@
 ```
-# Java/Maven specific
-target/
+# Compiled and build artifacts
 *.class
-*.jar
-*.war
-*.ear
-*.zip
-*.tar.gz
+*.o
+*.obj
+*.out
+target/
 
 # Dependencies
-lib/
-!lib/**/*
+.mypy_cache/
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
 
-# IDE
-.idea/
-*.iml
-*.ipr
-*.iws
-.vscode/
-
-# Logs
+# Logs and temp files
 *.log
+*.tmp
+*.swp
 
 # Environment
 .env
 .env.local
 *.env.*
 
-# OS
+# Editors
+.vscode/
+.idea/
+
+# System files
 .DS_Store
 Thumbs.db
 
-# Testing
-test-results/
+# Original rules preserved
+*.log
 ```

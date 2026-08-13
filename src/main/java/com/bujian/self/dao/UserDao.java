@@ -3,7 +3,7 @@ package com.bujian.self.dao;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 
-import com.bujian.self.dto.SqlCaptureExecutor;
+import com.bujian.self.config.SqlCaptureExecutor;
 import com.bujian.self.dto.User;
 import com.bujian.self.dto.UserRowMapper;
 import com.bujian.self.service.SqlCapturingNamedParameterJdbcTemplate;

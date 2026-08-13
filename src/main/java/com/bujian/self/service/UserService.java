@@ -4,8 +4,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
 import com.bujian.self.dao.UserDao;
-import com.bujian.self.dto.QueryResponse;
-import com.bujian.self.dto.SqlCaptureExecutor;
+import com.bujian.self.config.SqlCaptureExecutor;
 import com.bujian.self.dto.User;
 import com.bujian.self.dto.UserQueryRequest;
 
@@ -26,7 +25,7 @@ public class UserService {
      * @param request 查询请求
      * @return 查询响应
      */
-    public QueryResponse<List<User>> safeSearch(UserQueryRequest request) {
+    public SqlCaptureExecutor<List<User>> safeSearch(UserQueryRequest request) {
         // 构建参数
         MapSqlParameterSource params = new MapSqlParameterSource();
         
@@ -46,13 +45,8 @@ public class UserService {
                 this::reviewSqlParams
         );
         
-        if (!executor.isShouldExecute()) {
-            // SQL 被拒绝
-            return QueryResponse.rejected(executor.getRejectReason(), executor.getSql());
-        }
-        
-        // SQL 执行成功
-        return QueryResponse.success(executor.getResult(), executor.getSql());
+        // 直接返回 SqlCaptureExecutor，包含 success/message/data/sql 字段
+        return executor;
     }
 
     /**
