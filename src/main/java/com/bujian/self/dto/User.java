@@ -1,15 +1,12 @@
 package com.bujian.self.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class User {
-    private Long id;
-    private String name;
-    private Integer age;
-    private String email;
+/**
+ * 用户实体
+ */
+public record User(
+    Long id,
+    String name,
+    Integer age,
+    String email
+) {
 }
