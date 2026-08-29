@@ -62,11 +62,15 @@ public class UserService {
         StringBuilder reasons = new StringBuilder();
         
         // 检查 name 参数（getValues().get 在参数未注册时返回 null，不会抛异常）
+        // 注意：params 中存放的是已拼接通配符的值（如 "%张%"），需剥离 '%' 还原原始姓名后再判断长度
         Object nameValue = params.getValues().get("name");
-        if (nameValue != null && nameValue.toString().length() > 2) {
-            hasValidCondition = true;
-        } else if (nameValue != null) {
-            reasons.append("姓名查询条件至少需要 2 个字符; ");
+        if (nameValue != null) {
+            String rawName = nameValue.toString().replace("%", "");
+            if (rawName.length() >= 2) {
+                hasValidCondition = true;
+            } else {
+                reasons.append("姓名查询条件至少需要 2 个字符; ");
+            }
         }
         
         // 检查年龄参数（getValues().get 在参数未注册时返回 null，不会抛异常）
