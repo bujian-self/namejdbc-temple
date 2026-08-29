@@ -6,8 +6,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 
-import com.bujian.self.service.SqlCapturingNamedParameterJdbcTemplate;
-
 import javax.sql.DataSource;
 
 @Configuration
@@ -25,11 +23,5 @@ public class JdbcConfig {
     @Bean
     public NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
         return new NamedParameterJdbcTemplate(dataSource);
-    }
-
-    @Bean
-    public SqlCapturingNamedParameterJdbcTemplate sqlCapturingNamedParameterJdbcTemplate(
-            NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        return new SqlCapturingNamedParameterJdbcTemplate(namedParameterJdbcTemplate);
     }
 }

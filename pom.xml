@@ -39,7 +39,7 @@
         <dependency>
             <groupId>com.feiniaojin</groupId>
             <artifactId>graceful-response</artifactId>
-            <version>5.0.0</version>
+            <version>5.0.0-boot3</version>
         </dependency>
 
         <!-- H2 Database -->

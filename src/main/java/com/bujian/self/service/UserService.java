@@ -39,19 +39,15 @@ public class UserService {
             params.addValue("maxAge", request.maxAge());
         }
         
-        // 执行查询，传入 SQL 审查函数（在 MapSqlParameterSource 层面判断）
-        SqlCaptureExecutor<List<User>> executor = userDao.findUsersByCondition(
-                params,
-                this::reviewSqlParams
-        );
-        
-        if (!executor.shouldExecute()) {
-            // SQL 被拒绝
-            throw new IllegalArgumentException(executor.rejectReason());
+        // 先由 service 自行校验参数（基于 MapSqlParameterSource 判断），校验不通过时抛出异常
+        String rejectReason = reviewSqlParams(params);
+        if (rejectReason != null) {
+            throw new IllegalArgumentException(rejectReason);
         }
         
-        // SQL 执行成功
-        return executor.result();
+        // 校验通过，执行查询并返回结果（由调用方决定何时执行）
+        SqlCaptureExecutor<List<User>> executor = userDao.findUsersByCondition(params);
+        return executor.execute();
     }
 
     /**
@@ -65,17 +61,17 @@ public class UserService {
         boolean hasValidCondition = false;
         StringBuilder reasons = new StringBuilder();
         
-        // 检查 name 参数
-        Object nameValue = params.getValue("name");
+        // 检查 name 参数（getValues().get 在参数未注册时返回 null，不会抛异常）
+        Object nameValue = params.getValues().get("name");
         if (nameValue != null && nameValue.toString().length() > 2) {
             hasValidCondition = true;
         } else if (nameValue != null) {
             reasons.append("姓名查询条件至少需要 2 个字符; ");
         }
         
-        // 检查年龄参数
-        Object minAge = params.getValue("minAge");
-        Object maxAge = params.getValue("maxAge");
+        // 检查年龄参数（getValues().get 在参数未注册时返回 null，不会抛异常）
+        Object minAge = params.getValues().get("minAge");
+        Object maxAge = params.getValues().get("maxAge");
         
         if (minAge != null || maxAge != null) {
             hasValidCondition = true;
