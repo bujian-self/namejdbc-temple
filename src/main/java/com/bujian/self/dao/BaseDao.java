@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
+import com.bujian.self.config.SqlCaptureExecutor;
 import com.bujian.self.config.TableInfoHelp;
 import com.bujian.self.dto.BaseRowMapper;
 import com.bujian.self.dto.QueryParam;
@@ -18,36 +19,44 @@ import java.util.List;
 /**
  * 通用 DAO 基类，封装 NamedParameterJdbcTemplate 与基于反射的通用行映射器，
  * 并通过 {@link TableInfoHelp} 反射解析实体得到表名与主键，提供基础单表 CRUD 能力。
- * 子类仅需在声明泛型实体类型即可复用，构造方式有三种：
+ * 所有执行方法均返回 {@link SqlCaptureExecutor}，由调用方通过 {@code execute()} 触发实际执行，
+ * 执行前可查看生成的 SQL 与参数。
+ * {@code namedParameterJdbcTemplate} 由 Spring 通过 {@link Resource} 注入，并提供 {@link #getNamedParameterJdbcTemplate()}、{@link #getTableInfo()}。
+ * 子类仅需在声明泛型实体类型即可复用，构造方式有两种：
  * <ul>
- *   <li>BaseDao(jdbcTemplate, Class)            —— 显式传入 jdbcTemplate 与实体类（最可靠）</li>
- *   <li>BaseDao(jdbcTemplate)                   —— 实体类从泛型父类解析</li>
- *   <li>BaseDao()                              —— 无参，jdbcTemplate 由 @Resource @Lazy 字段注入</li>
+ *   <li>BaseDao(Class)            —— 显式传入实体类</li>
+ *   <li>BaseDao()                  —— 无参，实体类从泛型父类解析</li>
  * </ul>
  *
  * @param <T> 实体类型
  */
 public abstract class BaseDao<T> {
 
-    @Resource(name = "namedParameterJdbcTemplate")
+    @Resource
     @Lazy
-    protected NamedParameterJdbcTemplate jdbcTemplate;
+    protected NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     protected final TableInfo tableInfo;
 
     protected final BaseRowMapper<T> rowMapper;
 
-    public BaseDao(NamedParameterJdbcTemplate jdbcTemplate, Class<T> entityClass) {
-        this.tableInfo = TableInfoHelp.parse(entityClass);
-        this.rowMapper = new BaseRowMapper<>(tableInfo);
-        this.jdbcTemplate = jdbcTemplate;
+    /**
+     * 获取当前 DAO 所使用的 {@code namedParameterJdbcTemplate}。
+     */
+    public NamedParameterJdbcTemplate getNamedParameterJdbcTemplate() {
+        return namedParameterJdbcTemplate;
     }
 
-    public BaseDao(NamedParameterJdbcTemplate jdbcTemplate) {
-        Class<T> entityClass = resolveEntityClass();
+    /**
+     * 获取当前 DAO 解析出的实体表元信息。
+     */
+    public TableInfo getTableInfo() {
+        return tableInfo;
+    }
+
+    public BaseDao(Class<T> entityClass) {
         this.tableInfo = TableInfoHelp.parse(entityClass);
         this.rowMapper = new BaseRowMapper<>(tableInfo);
-        this.jdbcTemplate = jdbcTemplate;
     }
 
     protected BaseDao() {
@@ -96,41 +105,48 @@ public abstract class BaseDao<T> {
     // ===================== 查询 =====================
 
     /**
-     * 根据主键查询单条记录，不存在时返回 null
+     * 根据主键查询单条记录，不存在时返回 null。复用 {@link #selectOne(QueryParam)}。
      */
-    public T selectById(Object id) {
-        String sql = "SELECT * FROM " + tableInfo.tableName() + " WHERE " + tableInfo.idColumn() + " = :id";
-        MapSqlParameterSource params = new MapSqlParameterSource("id", id);
-        List<T> list = jdbcTemplate.query(sql, params, rowMapper);
-        return list.isEmpty() ? null : list.get(0);
+    public SqlCaptureExecutor<T> selectById(Object id) {
+        QueryParam<T> qp = new QueryParam<>(tableInfo);
+        qp.eq(tableInfo.idColumn(), id);
+        return selectOne(qp);
     }
 
     /**
      * 根据 {@link QueryParam} 构造的条件查询记录列表（自动生成 SELECT * FROM 表 WHERE ... ORDER BY ...）
      */
-    public List<T> selectList(QueryParam<T> qp) {
+    public SqlCaptureExecutor<List<T>> selectList(QueryParam<T> qp) {
         String sql = "SELECT * FROM " + tableInfo.tableName() + " " + qp.toSql();
-        return jdbcTemplate.query(sql, qp.getParams(), rowMapper);
+        MapSqlParameterSource params = qp.getParams();
+        return new SqlCaptureExecutor<>(sql, params, () -> namedParameterJdbcTemplate.query(sql, params, rowMapper));
     }
 
     /**
      * 根据 {@link QueryParam} 查询唯一记录：0 条返回 null，超过 1 条抛异常
      */
-    public T selectOne(QueryParam<T> qp) {
-        List<T> list = selectList(qp);
-        if (list.size() > 1) {
-            throw new IllegalStateException("期望返回唯一记录，但实际返回 " + list.size() + " 条");
-        }
-        return list.isEmpty() ? null : list.get(0);
+    public SqlCaptureExecutor<T> selectOne(QueryParam<T> qp) {
+        String sql = "SELECT * FROM " + tableInfo.tableName() + " " + qp.toSql();
+        MapSqlParameterSource params = qp.getParams();
+        return new SqlCaptureExecutor<>(sql, params, () -> {
+            List<T> list = namedParameterJdbcTemplate.query(sql, params, rowMapper);
+            if (list.size() > 1) {
+                throw new IllegalStateException("期望返回唯一记录，但实际返回 " + list.size() + " 条");
+            }
+            return list.isEmpty() ? null : list.get(0);
+        });
     }
 
     /**
      * 根据 {@link QueryParam} 查询满足条件的总记录数
      */
-    public long selectCount(QueryParam<T> qp) {
+    public SqlCaptureExecutor<Long> selectCount(QueryParam<T> qp) {
         String sql = "SELECT COUNT(*) FROM " + tableInfo.tableName() + " " + qp.toWhereSql();
-        Long count = jdbcTemplate.queryForObject(sql, qp.getParams(), Long.class);
-        return count == null ? 0L : count;
+        MapSqlParameterSource params = qp.getParams();
+        return new SqlCaptureExecutor<>(sql, params, () -> {
+            Long count = namedParameterJdbcTemplate.queryForObject(sql, params, Long.class);
+            return count == null ? 0L : count;
+        });
     }
 
     // ===================== 新增 =====================
@@ -138,9 +154,9 @@ public abstract class BaseDao<T> {
     /**
      * 插入实体。自增主键字段值为 null 时自动跳过，交由数据库生成。
      *
-     * @return 受影响行数
+     * @return 封装受影响行数的执行器
      */
-    public int insert(T entity) {
+    public SqlCaptureExecutor<Integer> insert(T entity) {
         StringBuilder columns = new StringBuilder();
         StringBuilder values = new StringBuilder();
         MapSqlParameterSource params = new MapSqlParameterSource();
@@ -162,15 +178,15 @@ public abstract class BaseDao<T> {
             first = false;
         }
         String sql = "INSERT INTO " + tableInfo.tableName() + " (" + columns + ") VALUES (" + values + ")";
-        return jdbcTemplate.update(sql, params);
+        return new SqlCaptureExecutor<>(sql, params, () -> namedParameterJdbcTemplate.update(sql, params));
     }
 
     /**
      * 根据主键更新实体非空字段。
      *
-     * @return 受影响行数
+     * @return 封装受影响行数的执行器
      */
-    public int updateById(T entity) {
+    public SqlCaptureExecutor<Integer> updateById(T entity) {
         Object idVal = readField(entity, tableInfo.idField());
         if (idVal == null) {
             throw new IllegalArgumentException("更新实体缺少主键值");
@@ -198,26 +214,28 @@ public abstract class BaseDao<T> {
         params.addValue(tableInfo.idColumn(), idVal);
         String sql = "UPDATE " + tableInfo.tableName() + " SET " + set
                 + " WHERE " + tableInfo.idColumn() + " = :" + tableInfo.idColumn();
-        return jdbcTemplate.update(sql, params);
+        return new SqlCaptureExecutor<>(sql, params, () -> namedParameterJdbcTemplate.update(sql, params));
     }
 
     /**
-     * 根据主键删除。
+     * 根据主键删除。复用 {@link #delete(QueryParam)}。
      *
-     * @return 受影响行数
+     * @return 封装受影响行数的执行器
      */
-    public int deleteById(Object id) {
-        String sql = "DELETE FROM " + tableInfo.tableName() + " WHERE " + tableInfo.idColumn() + " = :id";
-        return jdbcTemplate.update(sql, new MapSqlParameterSource("id", id));
+    public SqlCaptureExecutor<Integer> deleteById(Object id) {
+        QueryParam<T> qp = new QueryParam<>(tableInfo);
+        qp.eq(tableInfo.idColumn(), id);
+        return delete(qp);
     }
 
     /**
      * 根据 {@link QueryParam} 条件删除。
      *
-     * @return 受影响行数
+     * @return 封装受影响行数的执行器
      */
-    public int delete(QueryParam<T> qp) {
+    public SqlCaptureExecutor<Integer> delete(QueryParam<T> qp) {
         String sql = "DELETE FROM " + tableInfo.tableName() + " " + qp.toWhereSql();
-        return jdbcTemplate.update(sql, qp.getParams());
+        MapSqlParameterSource params = qp.getParams();
+        return new SqlCaptureExecutor<>(sql, params, () -> namedParameterJdbcTemplate.update(sql, params));
     }
 }

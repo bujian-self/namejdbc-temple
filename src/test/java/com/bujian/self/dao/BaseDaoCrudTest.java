@@ -38,9 +38,9 @@ public class BaseDaoCrudTest {
     @Test
     void insertAndSelect() {
         User u = new User(null, "新用户", 18, "new@example.com");
-        assertEquals(1, userDao.insert(u));
-        assertEquals(9, userDao.selectCount(new QueryParam<User>() {}));
-        User inserted = userDao.selectOne(new QueryParam<User>() {}.eq("name", "新用户"));
+        assertEquals(1, userDao.insert(u).execute());
+        assertEquals(9L, userDao.selectCount(new QueryParam<User>() {}).execute());
+        User inserted = userDao.selectOne(new QueryParam<User>() {}.eq("name", "新用户")).execute();
         assertNotNull(inserted);
         assertEquals(18, inserted.age());
     }
@@ -48,22 +48,22 @@ public class BaseDaoCrudTest {
     @Test
     void updateById() {
         User u = new User(1L, "张三改", 26, "zhangsan2@example.com");
-        assertEquals(1, userDao.updateById(u));
-        User after = userDao.selectById(1L);
+        assertEquals(1, userDao.updateById(u).execute());
+        User after = userDao.selectById(1L).execute();
         assertEquals("张三改", after.name());
         assertEquals(26, after.age());
     }
 
     @Test
     void deleteById() {
-        assertEquals(1, userDao.deleteById(1L));
-        assertNull(userDao.selectById(1L));
+        assertEquals(1, userDao.deleteById(1L).execute());
+        assertNull(userDao.selectById(1L).execute());
     }
 
     @Test
     void deleteByQueryParam() {
         QueryParam<User> qp = new QueryParam<User>() {}.lt("age", 25);
-        assertEquals(1, userDao.delete(qp));
-        assertEquals(7, userDao.selectCount(new QueryParam<User>() {}));
+        assertEquals(1, userDao.delete(qp).execute());
+        assertEquals(7L, userDao.selectCount(new QueryParam<User>() {}).execute());
     }
 }

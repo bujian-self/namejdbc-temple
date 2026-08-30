@@ -34,7 +34,7 @@ public class UserDaoTest {
 
     @Test
     void testNoArgConstructorWithResourceInjection() {
-        User u = userDao.selectById(1L);
+        User u = userDao.selectById(1L).execute();
         assertTrue(u != null && "张三".equals(u.name()));
     }
 }

@@ -38,42 +38,42 @@ public class QueryParamTest {
 
     @Test
     void countAll() {
-        assertEquals(8, userDao.selectCount(new QueryParam<User>() {}));
+        assertEquals(8L, userDao.selectCount(new QueryParam<User>() {}).execute());
     }
 
     @Test
     void eqLambda() {
         QueryParam<User> qp = new QueryParam<User>() {}.eq(User::name, "张三");
-        List<User> list = userDao.selectList(qp);
+        List<User> list = userDao.selectList(qp).execute();
         assertEquals(1, list.size());
         assertEquals(25, list.get(0).age());
     }
 
     @Test
     void geString() {
-        assertEquals(5, userDao.selectCount(new QueryParam<User>() {}.ge("age", 30)));
+        assertEquals(5L, userDao.selectCount(new QueryParam<User>() {}.ge("age", 30)).execute());
     }
 
     @Test
     void like() {
-        assertEquals(1, userDao.selectCount(new QueryParam<User>() {}.like("name", "李")));
+        assertEquals(1L, userDao.selectCount(new QueryParam<User>() {}.like("name", "李")).execute());
     }
 
     @Test
     void between() {
-        assertEquals(4, userDao.selectCount(new QueryParam<User>() {}.between("age", 28, 35)));
+        assertEquals(4L, userDao.selectCount(new QueryParam<User>() {}.between("age", 28, 35)).execute());
     }
 
     @Test
     void inLambda() {
         QueryParam<User> qp = new QueryParam<User>() {}.in(User::name, List.of("张三", "李四"));
-        assertEquals(2, userDao.selectList(qp).size());
+        assertEquals(2, userDao.selectList(qp).execute().size());
     }
 
     @Test
     void orderByAndLast() {
         QueryParam<User> qp = new QueryParam<User>() {}.orderByDesc("age").last("LIMIT 3");
-        List<User> list = userDao.selectList(qp);
+        List<User> list = userDao.selectList(qp).execute();
         assertEquals(3, list.size());
         assertEquals(45, list.get(0).age());
     }
@@ -81,21 +81,21 @@ public class QueryParamTest {
     @Test
     void orCondition() {
         QueryParam<User> qp = new QueryParam<User>() {}.ge("age", 40).or().like("name", "张");
-        assertEquals(3, userDao.selectList(qp).size());
+        assertEquals(3, userDao.selectList(qp).execute().size());
     }
 
     @Test
     void eqNullToIsNull() {
         QueryParam<User> qp = new QueryParam<User>() {}.eq("email", null);
         assertTrue(qp.toSql().contains("WHERE email IS NULL"));
-        assertEquals(0, userDao.selectCount(qp));
+        assertEquals(0L, userDao.selectCount(qp).execute());
     }
 
     @Test
     void neNullToIsNotNull() {
         QueryParam<User> qp = new QueryParam<User>() {}.ne("email", null);
         assertTrue(qp.toSql().contains("WHERE email IS NOT NULL"));
-        assertEquals(8, userDao.selectCount(qp));
+        assertEquals(8L, userDao.selectCount(qp).execute());
     }
 
     @Test

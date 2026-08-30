@@ -7,58 +7,84 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * 封装 SQL 和执行所需上下文的数据结构
+ * 通用 SQL 执行器：封装最终 SQL、命名参数与执行逻辑，调用方通过 {@link #execute()} 触发执行。
+ * 执行前可先查看 {@link #getSql()}（参数已替换的展示 SQL）或 {@link #getRawSql()}（含 :param 占位符）。
+ * 仿 MyBatis 打印 SQL 与参数日志。
  *
- * @param <R> 执行函数的返回类型
+ * @param <R> 执行结果类型
  */
-public record SqlCaptureExecutor<R>(
-    String sql,
-    MapSqlParameterSource params,
-    Supplier<R> queryFunction
-) {
-    static final Logger log = LoggerFactory.getLogger(SqlCaptureExecutor.class);
+public class SqlCaptureExecutor<R> {
 
-    /**
-     * 构造函数：用于传递无返回值的执行函数（如 INSERT/UPDATE/DELETE）
-     */
-    public SqlCaptureExecutor(String sql,
-                              MapSqlParameterSource params,
-                              Runnable updateFunction) {
+    private static final Logger log = LoggerFactory.getLogger(SqlCaptureExecutor.class);
+
+    private final String sql;
+    private final MapSqlParameterSource params;
+    private final Supplier<R> executor;
+
+    public SqlCaptureExecutor(String sql, MapSqlParameterSource params, Supplier<R> executor) {
+        this.sql = sql;
+        this.params = params;
+        this.executor = executor;
+    }
+
+    public SqlCaptureExecutor(String sql, MapSqlParameterSource params, Runnable runnable) {
         this(sql, params, () -> {
-            updateFunction.run();
+            runnable.run();
             return null;
         });
     }
 
     /**
-     * 执行查询并返回结果（使用无返回值函数时返回 null）
+     * 真正执行 SQL 并返回结果（执行后打印仿 MyBatis 风格日志）
      */
     public R execute() {
         R result = null;
         try {
-            result = queryFunction.get();
-            return result;
+            result = executor.get();
         } finally {
             printLog(result);
         }
+        return result;
+    }
+
+    public String getRawSql() {
+        return sql;
+    }
+
+    public MapSqlParameterSource getParams() {
+        return params;
     }
 
     /**
-     * SQL 执行日志，仿 mybatis 风格
+     * 获取参数替换后的展示 SQL（仅用于日志/调试）
      */
+    public String getSql() {
+        StringBuilder sb = new StringBuilder();
+        Matcher matcher = Pattern.compile(":(\\w+)").matcher(sql);
+        while (matcher.find()) {
+            String paramName = matcher.group(1);
+            String replacement = formatValue(params.getValues().get(paramName));
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
+
     private void printLog(Object res) {
         try {
             if (!log.isDebugEnabled()) {
                 return;
             }
             log.debug("==>  Preparing: {} ", sql);
-            log.debug("==> Parameters: {} ", params.getValues().entrySet().stream()
-                    .map(e -> e.getKey() + "=" + e.getValue()
-                            + "(" + (e.getValue() == null ? "null" : e.getValue().getClass().getSimpleName()) + ")")
-                    .collect(Collectors.joining(", ")));
+            log.debug("==> Parameters: {} ",
+                    params.getValues().entrySet().stream()
+                            .map(e -> e.getKey() + "=" + e.getValue()
+                                    + "(" + (e.getValue() == null ? "null" : e.getValue().getClass().getSimpleName()) + ")")
+                            .collect(Collectors.joining(", ")));
             Integer total = null;
             if (res instanceof Integer) {
                 total = (Integer) res;
@@ -76,24 +102,6 @@ public record SqlCaptureExecutor<R>(
         }
     }
 
-    /**
-     * 获取生成的最终 SQL（将参数替换进 SQL，仅用于展示）
-     */
-    public String getSql() {
-        StringBuilder sb = new StringBuilder();
-        Matcher matcher = java.util.regex.Pattern.compile(":(\\w+)").matcher(sql);
-        while (matcher.find()) {
-            String paramName = matcher.group(1);
-            String replacement = formatValue(params.getValues().get(paramName));
-            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
-        }
-        matcher.appendTail(sb);
-        return sb.toString();
-    }
-
-    /**
-     * 将参数值格式化为 SQL 字面量
-     */
     private String formatValue(Object value) {
         if (value == null) {
             return "NULL";
