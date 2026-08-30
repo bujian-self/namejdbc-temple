@@ -1,7 +1,6 @@
 package com.bujian.self.dao;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.bujian.self.config.SqlCaptureExecutor;
@@ -11,10 +10,6 @@ import java.util.List;
 
 @Repository
 public class UserDao extends BaseDao<User> {
-
-    public UserDao(NamedParameterJdbcTemplate jdbcTemplate) {
-        super(jdbcTemplate, User.class);
-    }
 
     /**
      * 根据条件查询用户（参数校验由 service 层完成）

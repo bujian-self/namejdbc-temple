@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 实体元信息解析工具：通过反射从实体类（record 或普通 POJO）解析出表名、字段/列映射与主键，
@@ -19,10 +20,16 @@ import java.util.Map;
  */
 public class TableInfoHelp {
 
+    private static final Map<Class<?>, TableInfo> CACHE = new ConcurrentHashMap<>();
+
     /**
-     * 解析实体类，返回表元信息
+     * 解析实体类，返回表元信息（带缓存，相同实体类只会反射解析一次）
      */
     public static TableInfo parse(Class<?> clazz) {
+        return CACHE.computeIfAbsent(clazz, TableInfoHelp::doParse);
+    }
+
+    private static TableInfo doParse(Class<?> clazz) {
         Map<String, String> fieldToColumn = new LinkedHashMap<>();
         Map<String, Class<?>> fieldTypes = new LinkedHashMap<>();
         List<String> fieldNames = new ArrayList<>();
