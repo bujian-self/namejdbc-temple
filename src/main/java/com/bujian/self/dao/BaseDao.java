@@ -10,13 +10,14 @@ import com.bujian.self.dto.BaseRowMapper;
 import com.bujian.self.dto.QueryParam;
 import com.bujian.self.dto.TableInfo;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
 
 /**
  * 通用 DAO 基类，封装 NamedParameterJdbcTemplate 与基于反射的通用行映射器，
- * 并通过 {@link TableInfoHelp} 反射解析实体得到表名与主键，提供基础单表查询能力。
+ * 并通过 {@link TableInfoHelp} 反射解析实体得到表名与主键，提供基础单表 CRUD 能力。
  * 子类仅需在声明泛型实体类型即可复用，构造方式有三种：
  * <ul>
  *   <li>BaseDao(jdbcTemplate, Class)            —— 显式传入 jdbcTemplate 与实体类（最可靠）</li>
@@ -75,6 +76,26 @@ public abstract class BaseDao<T> {
     }
 
     /**
+     * 反射读取实体字段值（兼容继承字段）
+     */
+    private Object readField(T entity, String fieldName) {
+        for (Class<?> c = entity.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            try {
+                Field f = c.getDeclaredField(fieldName);
+                f.setAccessible(true);
+                return f.get(entity);
+            } catch (NoSuchFieldException ignored) {
+                // 当前类无该字段，继续向父类查找
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("读取字段 " + fieldName + " 失败", e);
+            }
+        }
+        throw new IllegalStateException("未找到字段: " + fieldName);
+    }
+
+    // ===================== 查询 =====================
+
+    /**
      * 根据主键查询单条记录，不存在时返回 null
      */
     public T selectById(Object id) {
@@ -82,28 +103,6 @@ public abstract class BaseDao<T> {
         MapSqlParameterSource params = new MapSqlParameterSource("id", id);
         List<T> list = jdbcTemplate.query(sql, params, rowMapper);
         return list.isEmpty() ? null : list.get(0);
-    }
-
-    /**
-     * 根据 SQL 与参数查询唯一记录：0 条返回 null，超过 1 条抛出 IllegalStateException
-     */
-    public T selectOne(String sql, MapSqlParameterSource params) {
-        List<T> list = selectList(sql, params);
-        if (list.size() > 1) {
-            throw new IllegalStateException("期望返回唯一记录，但实际返回 " + list.size() + " 条");
-        }
-        return list.isEmpty() ? null : list.get(0);
-    }
-
-    /**
-     * 根据 SQL 与参数查询记录列表。
-     * 当 params 为 null 时重新赋值为 new MapSqlParameterSource()，照常执行传入的 sql。
-     */
-    public List<T> selectList(String sql, MapSqlParameterSource params) {
-        if (params == null) {
-            params = new MapSqlParameterSource();
-        }
-        return jdbcTemplate.query(sql, params, rowMapper);
     }
 
     /**
@@ -132,5 +131,93 @@ public abstract class BaseDao<T> {
         String sql = "SELECT COUNT(*) FROM " + tableInfo.tableName() + " " + qp.toWhereSql();
         Long count = jdbcTemplate.queryForObject(sql, qp.getParams(), Long.class);
         return count == null ? 0L : count;
+    }
+
+    // ===================== 新增 =====================
+
+    /**
+     * 插入实体。自增主键字段值为 null 时自动跳过，交由数据库生成。
+     *
+     * @return 受影响行数
+     */
+    public int insert(T entity) {
+        StringBuilder columns = new StringBuilder();
+        StringBuilder values = new StringBuilder();
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        boolean first = true;
+        for (int i = 0; i < tableInfo.fieldNames().size(); i++) {
+            String field = tableInfo.fieldNames().get(i);
+            String col = tableInfo.columnNames().get(i);
+            Object val = readField(entity, field);
+            if (col.equals(tableInfo.idColumn()) && val == null) {
+                continue;
+            }
+            if (!first) {
+                columns.append(", ");
+                values.append(", ");
+            }
+            columns.append(col);
+            values.append(":").append(col);
+            params.addValue(col, val);
+            first = false;
+        }
+        String sql = "INSERT INTO " + tableInfo.tableName() + " (" + columns + ") VALUES (" + values + ")";
+        return jdbcTemplate.update(sql, params);
+    }
+
+    /**
+     * 根据主键更新实体非空字段。
+     *
+     * @return 受影响行数
+     */
+    public int updateById(T entity) {
+        Object idVal = readField(entity, tableInfo.idField());
+        if (idVal == null) {
+            throw new IllegalArgumentException("更新实体缺少主键值");
+        }
+        StringBuilder set = new StringBuilder();
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        boolean first = true;
+        for (int i = 0; i < tableInfo.fieldNames().size(); i++) {
+            String field = tableInfo.fieldNames().get(i);
+            String col = tableInfo.columnNames().get(i);
+            if (col.equals(tableInfo.idColumn())) {
+                continue;
+            }
+            Object val = readField(entity, field);
+            if (val == null) {
+                continue;
+            }
+            if (!first) {
+                set.append(", ");
+            }
+            set.append(col).append(" = :").append(col);
+            params.addValue(col, val);
+            first = false;
+        }
+        params.addValue(tableInfo.idColumn(), idVal);
+        String sql = "UPDATE " + tableInfo.tableName() + " SET " + set
+                + " WHERE " + tableInfo.idColumn() + " = :" + tableInfo.idColumn();
+        return jdbcTemplate.update(sql, params);
+    }
+
+    /**
+     * 根据主键删除。
+     *
+     * @return 受影响行数
+     */
+    public int deleteById(Object id) {
+        String sql = "DELETE FROM " + tableInfo.tableName() + " WHERE " + tableInfo.idColumn() + " = :id";
+        return jdbcTemplate.update(sql, new MapSqlParameterSource("id", id));
+    }
+
+    /**
+     * 根据 {@link QueryParam} 条件删除。
+     *
+     * @return 受影响行数
+     */
+    public int delete(QueryParam<T> qp) {
+        String sql = "DELETE FROM " + tableInfo.tableName() + " " + qp.toWhereSql();
+        return jdbcTemplate.update(sql, qp.getParams());
     }
 }
