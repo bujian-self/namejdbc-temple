@@ -127,6 +127,18 @@ public class QueryParam<T> {
     private record OrderItem(String column, boolean asc) {
     }
 
+    private static boolean isNotEmpty(Object val) {
+        if (val == null) return false;
+        if (val instanceof String s) return !s.isEmpty();
+        if (val instanceof Collection<?> c) return !c.isEmpty();
+        if (val instanceof Object[] arr) return arr.length > 0;
+        return true;
+    }
+
+    private static boolean isNotBlank(Object val) {
+        return val instanceof String s && !s.isBlank();
+    }
+
     private String nextParam() {
         return "qp" + (paramIndex++);
     }
@@ -269,6 +281,144 @@ public class QueryParam<T> {
         return add(toColumn(column) + " IS NOT NULL", Map.of());
     }
 
+    // ===================== 非空条件重载 =====================
+
+    public QueryParam<T> eqNotNull(String column, Object val) {
+        return val != null ? eq(column, val) : this;
+    }
+
+    public QueryParam<T> eqNotBlank(String column, Object val) {
+        return isNotBlank(val) ? eq(column, val) : this;
+    }
+
+    public QueryParam<T> eqNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? eq(column, val) : this;
+    }
+
+    public QueryParam<T> neNotNull(String column, Object val) {
+        return val != null ? ne(column, val) : this;
+    }
+
+    public QueryParam<T> neNotBlank(String column, Object val) {
+        return isNotBlank(val) ? ne(column, val) : this;
+    }
+
+    public QueryParam<T> neNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? ne(column, val) : this;
+    }
+
+    public QueryParam<T> gtNotNull(String column, Object val) {
+        return val != null ? gt(column, val) : this;
+    }
+
+    public QueryParam<T> gtNotBlank(String column, Object val) {
+        return isNotBlank(val) ? gt(column, val) : this;
+    }
+
+    public QueryParam<T> gtNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? gt(column, val) : this;
+    }
+
+    public QueryParam<T> geNotNull(String column, Object val) {
+        return val != null ? ge(column, val) : this;
+    }
+
+    public QueryParam<T> geNotBlank(String column, Object val) {
+        return isNotBlank(val) ? ge(column, val) : this;
+    }
+
+    public QueryParam<T> geNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? ge(column, val) : this;
+    }
+
+    public QueryParam<T> ltNotNull(String column, Object val) {
+        return val != null ? lt(column, val) : this;
+    }
+
+    public QueryParam<T> ltNotBlank(String column, Object val) {
+        return isNotBlank(val) ? lt(column, val) : this;
+    }
+
+    public QueryParam<T> ltNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? lt(column, val) : this;
+    }
+
+    public QueryParam<T> leNotNull(String column, Object val) {
+        return val != null ? le(column, val) : this;
+    }
+
+    public QueryParam<T> leNotBlank(String column, Object val) {
+        return isNotBlank(val) ? le(column, val) : this;
+    }
+
+    public QueryParam<T> leNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? le(column, val) : this;
+    }
+
+    public QueryParam<T> likeNotNull(String column, Object val) {
+        return val != null ? like(column, val) : this;
+    }
+
+    public QueryParam<T> likeNotBlank(String column, Object val) {
+        return isNotBlank(val) ? like(column, val) : this;
+    }
+
+    public QueryParam<T> likeNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? like(column, val) : this;
+    }
+
+    public QueryParam<T> notLikeNotNull(String column, Object val) {
+        return val != null ? notLike(column, val) : this;
+    }
+
+    public QueryParam<T> notLikeNotBlank(String column, Object val) {
+        return isNotBlank(val) ? notLike(column, val) : this;
+    }
+
+    public QueryParam<T> notLikeNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? notLike(column, val) : this;
+    }
+
+    public QueryParam<T> likeLeftNotNull(String column, Object val) {
+        return val != null ? likeLeft(column, val) : this;
+    }
+
+    public QueryParam<T> likeLeftNotBlank(String column, Object val) {
+        return isNotBlank(val) ? likeLeft(column, val) : this;
+    }
+
+    public QueryParam<T> likeLeftNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? likeLeft(column, val) : this;
+    }
+
+    public QueryParam<T> likeRightNotNull(String column, Object val) {
+        return val != null ? likeRight(column, val) : this;
+    }
+
+    public QueryParam<T> likeRightNotBlank(String column, Object val) {
+        return isNotBlank(val) ? likeRight(column, val) : this;
+    }
+
+    public QueryParam<T> likeRightNotEmpty(String column, Object val) {
+        return isNotEmpty(val) ? likeRight(column, val) : this;
+    }
+
+    public QueryParam<T> betweenNotNull(String column, Object lo, Object hi) {
+        return (lo != null && hi != null) ? between(column, lo, hi) : this;
+    }
+
+    public QueryParam<T> notBetweenNotNull(String column, Object lo, Object hi) {
+        return (lo != null && hi != null) ? notBetween(column, lo, hi) : this;
+    }
+
+    public QueryParam<T> inNotEmpty(String column, Collection<?> values) {
+        return (values != null && !values.isEmpty()) ? in(column, values) : this;
+    }
+
+    public QueryParam<T> notInNotEmpty(String column, Collection<?> values) {
+        return (values != null && !values.isEmpty()) ? notIn(column, values) : this;
+    }
+
     // ===================== 排序 =====================
 
     public QueryParam<T> orderByAsc(String column) {
@@ -386,4 +536,74 @@ public class QueryParam<T> {
     public QueryParam<T> orderByAsc(SFunction<T, ?> fn) { return orderByAsc(toColumn(fn)); }
 
     public QueryParam<T> orderByDesc(SFunction<T, ?> fn) { return orderByDesc(toColumn(fn)); }
+
+    // ===================== Lambda 非空重载 =====================
+
+    public QueryParam<T> eqNotNull(SFunction<T, ?> fn, Object val) { return eqNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> eqNotBlank(SFunction<T, ?> fn, Object val) { return eqNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> eqNotEmpty(SFunction<T, ?> fn, Object val) { return eqNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> neNotNull(SFunction<T, ?> fn, Object val) { return neNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> neNotBlank(SFunction<T, ?> fn, Object val) { return neNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> neNotEmpty(SFunction<T, ?> fn, Object val) { return neNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> gtNotNull(SFunction<T, ?> fn, Object val) { return gtNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> gtNotBlank(SFunction<T, ?> fn, Object val) { return gtNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> gtNotEmpty(SFunction<T, ?> fn, Object val) { return gtNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> geNotNull(SFunction<T, ?> fn, Object val) { return geNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> geNotBlank(SFunction<T, ?> fn, Object val) { return geNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> geNotEmpty(SFunction<T, ?> fn, Object val) { return geNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> ltNotNull(SFunction<T, ?> fn, Object val) { return ltNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> ltNotBlank(SFunction<T, ?> fn, Object val) { return ltNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> ltNotEmpty(SFunction<T, ?> fn, Object val) { return ltNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> leNotNull(SFunction<T, ?> fn, Object val) { return leNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> leNotBlank(SFunction<T, ?> fn, Object val) { return leNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> leNotEmpty(SFunction<T, ?> fn, Object val) { return leNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> likeNotNull(SFunction<T, ?> fn, Object val) { return likeNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> likeNotBlank(SFunction<T, ?> fn, Object val) { return likeNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> likeNotEmpty(SFunction<T, ?> fn, Object val) { return likeNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> notLikeNotNull(SFunction<T, ?> fn, Object val) { return notLikeNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> notLikeNotBlank(SFunction<T, ?> fn, Object val) { return notLikeNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> notLikeNotEmpty(SFunction<T, ?> fn, Object val) { return notLikeNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> likeLeftNotNull(SFunction<T, ?> fn, Object val) { return likeLeftNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> likeLeftNotBlank(SFunction<T, ?> fn, Object val) { return likeLeftNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> likeLeftNotEmpty(SFunction<T, ?> fn, Object val) { return likeLeftNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> likeRightNotNull(SFunction<T, ?> fn, Object val) { return likeRightNotNull(toColumn(fn), val); }
+
+    public QueryParam<T> likeRightNotBlank(SFunction<T, ?> fn, Object val) { return likeRightNotBlank(toColumn(fn), val); }
+
+    public QueryParam<T> likeRightNotEmpty(SFunction<T, ?> fn, Object val) { return likeRightNotEmpty(toColumn(fn), val); }
+
+    public QueryParam<T> betweenNotNull(SFunction<T, ?> fn, Object lo, Object hi) { return betweenNotNull(toColumn(fn), lo, hi); }
+
+    public QueryParam<T> notBetweenNotNull(SFunction<T, ?> fn, Object lo, Object hi) { return notBetweenNotNull(toColumn(fn), lo, hi); }
+
+    public QueryParam<T> inNotEmpty(SFunction<T, ?> fn, Collection<?> values) { return inNotEmpty(toColumn(fn), values); }
+
+    public QueryParam<T> notInNotEmpty(SFunction<T, ?> fn, Collection<?> values) { return notInNotEmpty(toColumn(fn), values); }
 }
