@@ -14,12 +14,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 通用行映射器：通过反射将 ResultSet 映射为实体
+ * 通用行映射器：基于 {@link TableInfo} 的元信息，通过反射将 ResultSet 映射为实体。
  * <ul>
  *   <li>实体为 record 时，按 RecordComponent 的顺序与类型调用其规范构造器创建实例</li>
  *   <li>实体为普通类时，使用无参构造创建实例后，再通过字段反射赋值</li>
  * </ul>
- * 列名与字段名按“驼峰字段名 <-> 下划线列名”规则互转匹配（例如 userName 对应 user_name）。
+ * 列名与字段名的映射直接取自 TableInfo.fieldToColumn（无映射时回退到驼峰转下划线）。
  *
  * @param <T> 目标实体类型
  */
@@ -27,11 +27,11 @@ public class BaseRowMapper<T> implements RowMapper<T> {
 
     private final Class<T> clazz;
 
-    private final boolean record;
+    private final TableInfo tableInfo;
 
-    public BaseRowMapper(Class<T> clazz) {
-        this.clazz = clazz;
-        this.record = clazz.isRecord();
+    public BaseRowMapper(TableInfo tableInfo) {
+        this.tableInfo = tableInfo;
+        this.clazz = (Class<T>) tableInfo.entityClass();
     }
 
     @Override
@@ -42,7 +42,7 @@ public class BaseRowMapper<T> implements RowMapper<T> {
         for (int i = 1; i <= columnCount; i++) {
             columnIndex.put(meta.getColumnLabel(i).toLowerCase(), i);
         }
-        return record ? mapRecord(rs, columnIndex) : mapPojo(rs, columnIndex);
+        return clazz.isRecord() ? mapRecord(rs, columnIndex) : mapPojo(rs, columnIndex);
     }
 
     private T mapRecord(ResultSet rs, Map<String, Integer> columnIndex) throws SQLException {
@@ -52,7 +52,8 @@ public class BaseRowMapper<T> implements RowMapper<T> {
         for (int i = 0; i < components.length; i++) {
             RecordComponent rc = components[i];
             paramTypes[i] = rc.getType();
-            args[i] = readValue(rs, columnIndex, rc.getName(), rc.getType());
+            String column = columnNameOf(rc.getName());
+            args[i] = readValue(rs, columnIndex, column, rc.getType());
         }
         try {
             Constructor<T> ctor = clazz.getDeclaredConstructor(paramTypes);
@@ -75,7 +76,8 @@ public class BaseRowMapper<T> implements RowMapper<T> {
         for (Class<?> c = clazz; c != null && c != Object.class; c = c.getSuperclass()) {
             for (Field field : c.getDeclaredFields()) {
                 field.setAccessible(true);
-                Object value = readValue(rs, columnIndex, field.getName(), field.getType());
+                String column = columnNameOf(field.getName());
+                Object value = readValue(rs, columnIndex, column, field.getType());
                 try {
                     field.set(instance, value);
                 } catch (IllegalAccessException e) {
@@ -86,9 +88,13 @@ public class BaseRowMapper<T> implements RowMapper<T> {
         return instance;
     }
 
-    private Object readValue(ResultSet rs, Map<String, Integer> columnIndex, String fieldName, Class<?> type)
+    private String columnNameOf(String fieldName) {
+        return tableInfo.fieldToColumn().getOrDefault(fieldName, toColumnName(fieldName));
+    }
+
+    private Object readValue(ResultSet rs, Map<String, Integer> columnIndex, String column, Class<?> type)
             throws SQLException {
-        Integer idx = columnIndex.get(toColumnName(fieldName).toLowerCase());
+        Integer idx = columnIndex.get(column.toLowerCase());
         if (idx == null) {
             return null;
         }
@@ -127,7 +133,7 @@ public class BaseRowMapper<T> implements RowMapper<T> {
     }
 
     /**
-     * 字段名（驼峰）转列名（下划线小写），用于按列查找 ResultSet。
+     * 字段名（驼峰）转列名（下划线小写）的回退方案，仅当 TableInfo 无映射时使用。
      */
     private String toColumnName(String fieldName) {
         StringBuilder sb = new StringBuilder();

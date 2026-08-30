@@ -42,6 +42,12 @@
             <version>5.0.0-boot3</version>
         </dependency>
 
+        <!-- Jakarta Persistence API（提供 @Table / @Id 等注解，供 TableInfoHelp 反射解析实体） -->
+        <dependency>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+        </dependency>
+
         <!-- H2 Database -->
         <dependency>
             <groupId>com.h2database</groupId>
