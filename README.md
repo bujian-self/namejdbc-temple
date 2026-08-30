@@ -36,7 +36,7 @@ src/main/java/com/bujian/self/
 ├── dto/
 │   ├── User.java                           # 用户实体
 │   ├── UserQueryRequest.java               # 查询请求参数
-│   └── UserRowMapper.java                  # 行映射器
+│   └── BaseRowMapper.java                  # 通用行映射器（反射创建实体）
 └── service/
     └── UserService.java                    # 服务层（参数校验逻辑）
 
