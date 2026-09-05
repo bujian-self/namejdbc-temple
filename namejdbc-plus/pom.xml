@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.bujian</groupId>
+    <groupId>org.bujian</groupId>
     <artifactId>namejdbc-plus</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
