@@ -1,11 +1,11 @@
 package org.bujian.self.service;
 
+import org.bujian.dto.QueryParam;
+import org.bujian.dto.UserQueryRequest;
 import org.springframework.stereotype.Service;
 
 import org.bujian.self.dao.UserDao;
-import com.bujian.self.dto.QueryParam;
 import org.bujian.self.dto.User;
-import com.bujian.self.dto.UserQueryRequest;
 
 import java.util.List;
 

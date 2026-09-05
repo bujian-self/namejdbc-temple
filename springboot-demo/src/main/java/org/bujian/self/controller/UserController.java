@@ -1,9 +1,9 @@
 package org.bujian.self.controller;
 
+import org.bujian.dto.UserQueryRequest;
 import org.springframework.web.bind.annotation.*;
 
 import org.bujian.self.dto.User;
-import com.bujian.self.dto.UserQueryRequest;
 import org.bujian.self.service.UserService;
 
 import java.util.List;
