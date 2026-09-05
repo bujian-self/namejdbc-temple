@@ -12,63 +12,14 @@
     </parent>
 
     <groupId>com.bujian</groupId>
-    <artifactId>self</artifactId>
+    <artifactId>namejdbc-plus-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
-    <name>self</name>
+    <packaging>pom</packaging>
+    <name>namejdbc-plus-parent</name>
     <description>SQL Capture Demo Project</description>
 
-    <properties>
-        <java.version>21</java.version>
-    </properties>
-
-    <dependencies>
-        <!-- Spring Boot Starter JDBC -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jdbc</artifactId>
-        </dependency>
-
-        <!-- Spring Boot Starter Web -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- Graceful Response -->
-        <dependency>
-            <groupId>com.feiniaojin</groupId>
-            <artifactId>graceful-response</artifactId>
-            <version>5.0.0-boot3</version>
-        </dependency>
-
-        <!-- Jakarta Persistence API（提供 @Table / @Id 等注解，供 TableInfoHelp 反射解析实体） -->
-        <dependency>
-            <groupId>jakarta.persistence</groupId>
-            <artifactId>jakarta.persistence-api</artifactId>
-        </dependency>
-
-        <!-- H2 Database -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- Spring Boot Starter Test -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
+    <modules>
+        <module>namejdbc-plus</module>
+        <module>springboot-demo</module>
+    </modules>
 </project>
