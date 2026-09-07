@@ -42,6 +42,7 @@ public class QueryParam<T> {
     private String lastSql = "";
     private int paramIndex = 0;
     private String pendingConnector = "AND";
+    private String alias;
 
     /**
      * 无参构造：实体类从泛型父类解析，须以匿名子类形式使用（如 {@code new QueryParam<User>(){}}），
@@ -76,6 +77,15 @@ public class QueryParam<T> {
                 "无法从泛型父类解析实体类型，请使用匿名子类 new QueryParam<T>(){} 或显式传入 Class：" + getClass().getName());
     }
 
+    public QueryParam<T> alias(String alias) {
+        this.alias = alias;
+        return this;
+    }
+
+    public String getAlias() {
+        return alias;
+    }
+
     // ===================== 列名解析 =====================
 
     private String toColumn(String fieldOrColumn) {
@@ -83,7 +93,8 @@ public class QueryParam<T> {
             return null;
         }
         String col = tableInfo.fieldToColumn().get(fieldOrColumn);
-        return col != null ? col : fieldOrColumn;
+        col = col != null ? col : fieldOrColumn;
+        return alias != null ? alias + "." + col : col;
     }
 
     private String toColumn(SFunction<T, ?> fn) {
@@ -451,6 +462,17 @@ public class QueryParam<T> {
             lastParams.putAll(params);
         }
         return this;
+    }
+
+    /**
+     * 生成 FROM 子句：表名 [AS] 别名。
+     * 当设置了别名时返回 {@code FROM tableName alias}，否则返回 {@code FROM tableName}。
+     */
+    public String toFromSql() {
+        if (alias != null && !alias.isEmpty()) {
+            return tableInfo.tableName() + " " + alias;
+        }
+        return tableInfo.tableName();
     }
 
     // ===================== 输出 =====================

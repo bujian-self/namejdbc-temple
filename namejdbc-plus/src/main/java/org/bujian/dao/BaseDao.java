@@ -117,7 +117,8 @@ public abstract class BaseDao<T> {
      * 根据 {@link QueryParam} 构造的条件查询记录列表（自动生成 SELECT * FROM 表 WHERE ... ORDER BY ...）
      */
     public SqlCaptureExecutor<List<T>> selectList(QueryParam<T> qp) {
-        return new SqlCaptureExecutor<>(qp, () -> namedParameterJdbcTemplate.query(qp.toSql(), qp.getParams(), rowMapper));
+        return new SqlCaptureExecutor<>(qp, () -> namedParameterJdbcTemplate.query(
+                "SELECT * FROM " + qp.toFromSql() + " " + qp.toSql(), qp.getParams(), rowMapper));
     }
 
     /**
@@ -125,7 +126,8 @@ public abstract class BaseDao<T> {
      */
     public SqlCaptureExecutor<T> selectOne(QueryParam<T> qp) {
         return new SqlCaptureExecutor<>(qp, () -> {
-            List<T> list = namedParameterJdbcTemplate.query(qp.toSql(), qp.getParams(), rowMapper);
+            List<T> list = namedParameterJdbcTemplate.query(
+                    "SELECT * FROM " + qp.toFromSql() + " " + qp.toSql(), qp.getParams(), rowMapper);
             if (list.size() > 1) {
                 throw new IllegalStateException("期望返回唯一记录，但实际返回 " + list.size() + " 条");
             }
@@ -138,7 +140,8 @@ public abstract class BaseDao<T> {
      */
     public SqlCaptureExecutor<Long> selectCount(QueryParam<T> qp) {
         return new SqlCaptureExecutor<>(qp, () -> {
-            Long count = namedParameterJdbcTemplate.queryForObject(qp.toSql(), qp.getParams(), Long.class);
+            Long count = namedParameterJdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM " + qp.toFromSql() + " " + qp.toWhereSql(), qp.getParams(), Long.class);
             return count == null ? 0L : count;
         });
     }
@@ -228,6 +231,7 @@ public abstract class BaseDao<T> {
      * @return 封装受影响行数的执行器
      */
     public SqlCaptureExecutor<Integer> delete(QueryParam<T> qp) {
-        return new SqlCaptureExecutor<>(qp, () -> namedParameterJdbcTemplate.update(qp.toSql(), qp.getParams()));
+        return new SqlCaptureExecutor<>(qp, () -> namedParameterJdbcTemplate.update(
+                "DELETE FROM " + qp.toFromSql() + " " + qp.toSql(), qp.getParams()));
     }
 }
