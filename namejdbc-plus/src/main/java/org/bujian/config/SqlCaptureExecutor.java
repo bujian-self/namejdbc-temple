@@ -1,5 +1,6 @@
 package org.bujian.config;
 
+import org.bujian.dto.QueryParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -42,6 +43,17 @@ public class SqlCaptureExecutor<R> {
         this.executor = executor;
         this.startTime = System.currentTimeMillis();
         this.logElapsed = logElapsed;
+    }
+
+    public SqlCaptureExecutor(QueryParam<?> qp, Supplier<R> executor) {
+        this(qp.toSql(), qp.getParams(), executor);
+    }
+
+    public SqlCaptureExecutor(QueryParam<?> qp, Runnable runnable) {
+        this(qp.toSql(), qp.getParams(), () -> {
+            runnable.run();
+            return null;
+        });
     }
 
     public SqlCaptureExecutor(String sql, MapSqlParameterSource params, Runnable runnable) {
